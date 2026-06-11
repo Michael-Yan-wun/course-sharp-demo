@@ -154,9 +154,11 @@
     S.yieldRate = Math.min(99.5, Math.max(88, S.yieldRate));
 
     // OEE = 稼動 × 效率 × 品質（簡化教學版）
+    // 效率以「運轉中機台的理論最大產速」為分母，避免全線滿開時 OEE 衝到不真實的 99%
     const availability = (counts.run + counts.warn * 0.7) / 12;
-    const performance = S.uph / (S.uphBase * Math.max(0.3, availability));
-    S.oee = Math.min(99, Math.max(40, availability * Math.min(1.05, performance) * (S.yieldRate / 100) * 100));
+    const perMachineMax = 13.8; // 件/分/台（理論值）
+    const performance = Math.min(1, S.uph / (perMachineMax * Math.max(1, counts.run + counts.warn * 0.55)));
+    S.oee = Math.min(99, Math.max(40, availability * performance * (S.yieldRate / 100) * 100));
 
     S.energy = walk(S.energy, 4, 330 + counts.run * 6, 360 + counts.run * 9);
 

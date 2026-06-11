@@ -169,12 +169,14 @@
           </div>
           <div class="panel">
             <div class="panel-head">
-              <h3><i class="ico">፨</i> SHAP 蜂群圖 <small>每點 = 一個批次 ‧ 顏色 = 特徵值高低</small></h3>
+              <h3><i class="ico">፨</i> SHAP 依賴圖 <small>特徵值 vs 風險貢獻 ‧ 50 批次</small></h3>
+              <select id="dep-feature"></select>
             </div>
-            <div class="chart beeswarm" id="chart-beeswarm"></div>
+            <div class="chart dependence" id="chart-dependence"></div>
             <p class="global-note">
-              判讀：點越往<b class="pos">右</b>代表把不良率<b class="pos">往上推</b>；顏色越<b style="color:#ff7043">紅</b>代表該特徵值越高。
-              例如「原料含水率」紅點集中在右側 → 含水率越高、不良率風險越高。
+              判讀：每一點是一個批次。橫軸是這個特徵的<b>實際量測值</b>，縱軸是它把該批次的不良率
+              <b class="pos">推高（紅，φ&gt;0）</b>或<b style="color:#38e8a0">拉低（綠，φ&lt;0）</b>幾個百分點。
+              黃色虛線是<b style="color:#ffb547">製程規範值</b> —— 一眼就能看到「超出規範後，風險貢獻快速放大」。
             </p>
           </div>
         </div>
@@ -184,6 +186,16 @@
 
   <!-- ════════════════ Tab 2：營運戰情室 ════════════════ -->
   <main class="page" id="page-war">
+    <!-- 講師控制列 -->
+    <section class="war-toolbar panel">
+      <span class="wt-label">⚡ 情境注入</span>
+      <button class="btn mini scenario" data-scenario="overheat">🔥 模溫飆高</button>
+      <button class="btn mini scenario" data-scenario="yield-drop">📉 良率劣化</button>
+      <button class="btn mini scenario" data-scenario="rush-order">📦 急單插入</button>
+      <button class="btn mini scenario" data-scenario="breakdown">🛑 設備停機</button>
+      <span class="wt-hint">講師控制台 ‧ 注入異常後 AI Copilot 將主動回報</span>
+    </section>
+
     <!-- KPI 列 -->
     <section class="kpi-row">
       <div class="kpi panel" id="kpi-card-oee">
@@ -220,6 +232,7 @@
 
     <!-- 主面板區 -->
     <div class="war-layout">
+      <div class="war-main">
       <div class="war-left">
         <section class="panel">
           <div class="panel-head">
@@ -232,15 +245,6 @@
             <h3><i class="ico">✓</i> 即時良率走勢 <small>Rolling Yield ‧ Live</small><i class="live-dot"></i></h3>
           </div>
           <div class="chart war-chart" id="chart-yield"></div>
-        </section>
-        <section class="panel scenario-panel">
-          <div class="panel-head"><h3><i class="ico">⚡</i> 情境注入 <small>講師控制台</small></h3></div>
-          <div class="scenario-btns">
-            <button class="btn scenario" data-scenario="overheat">🔥 模溫飆高</button>
-            <button class="btn scenario" data-scenario="yield-drop">📉 良率劣化</button>
-            <button class="btn scenario" data-scenario="rush-order">📦 急單插入</button>
-            <button class="btn scenario" data-scenario="breakdown">🛑 設備停機</button>
-          </div>
         </section>
       </div>
 
@@ -264,8 +268,9 @@
           <div class="event-feed" id="event-feed"></div>
         </section>
       </div>
+      </div>
 
-      <!-- 右：AI Copilot -->
+      <!-- 右：AI Copilot（常駐右欄） -->
       <div class="war-right">
         <section class="panel copilot-panel">
           <div class="panel-head copilot-head">

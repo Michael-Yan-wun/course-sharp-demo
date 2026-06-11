@@ -31,8 +31,9 @@
   const convergeHistory = { iters: [], series: {} }; // key -> [φ...]
   D.FEATURE_KEYS.forEach(k => (convergeHistory.series[k] = []));
 
-  let chartConverge, chartWaterfall, chartImportance, chartBeeswarm;
+  let chartConverge, chartWaterfall, chartImportance, chartDependence;
   let globalComputed = false;
+  let globalPhi = null; // 50 批次的 φ（依賴圖切換特徵時重繪用）
 
   const fmt = (v, d = 2) => Number(v).toFixed(d);
   const sign = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2);
@@ -236,7 +237,7 @@
     chartConverge = echarts.init($("chart-converge"));
     chartWaterfall = echarts.init($("chart-waterfall"));
     window.addEventListener("resize", () => {
-      safeResize(chartConverge, chartWaterfall, chartImportance, chartBeeswarm);
+      safeResize(chartConverge, chartWaterfall, chartImportance, chartDependence);
     });
   }
 
@@ -431,60 +432,93 @@
       }]
     });
 
-    // 蜂群圖：x = φ，y = 特徵（加 jitter），顏色 = 特徵值百分位（藍低紅高）
-    const catOrder = imp.slice().reverse().map(o => o.f); // 重要性高的在上
-    const points = [];
-    catOrder.forEach((f, fi) => {
-      const vals = D.DATASET.map(r => r[f.key]);
-      const lo = Math.min(...vals), hi = Math.max(...vals);
-      D.DATASET.forEach((row, ri) => {
-        const t = hi > lo ? (row[f.key] - lo) / (hi - lo) : 0.5;
-        const rC = Math.round(64 + t * (255 - 64));
-        const gC = Math.round(156 - t * (156 - 112));
-        const bC = Math.round(255 - t * (255 - 67));
-        const jitter = ((ri * 37) % 17 - 8) / 24; // 決定性 jitter，避免每次重繪跳動
-        points.push({
-          value: [allPhi[ri][f.key], fi + jitter],
-          itemStyle: { color: `rgba(${rC},${gC},${bC},0.85)` },
-          batch: row.id, feat: f.name, raw: row[f.key].toFixed(f.digits) + f.unit
-        });
-      });
+    // 依賴圖：下拉選特徵（依重要性排序），x = 特徵實際值，y = 該特徵的 φ
+    globalPhi = allPhi;
+    const sel = $("dep-feature");
+    sel.innerHTML = "";
+    imp.slice().reverse().forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.f.key;
+      opt.textContent = `${o.f.name}（${o.f.unit}）`;
+      sel.appendChild(opt);
     });
-    chartBeeswarm = echarts.init($("chart-beeswarm"));
-    chartBeeswarm.setOption({
+    sel.value = "moisture"; // 預設講「含水率」— 故事最清楚
+    sel.addEventListener("change", () => renderDependence(sel.value));
+    chartDependence = echarts.init($("chart-dependence"));
+    renderDependence(sel.value);
+  }
+
+  /* ----------------------------------------------- dependence plot ------ */
+  // 各特徵的製程規範線（畫在依賴圖上，讓「超規 → 風險放大」一目了然）
+  const SPEC_LINES = {
+    moldTemp: [58, 62],
+    injPressure: [115],
+    holdTime: [2.9],
+    coolantTemp: [24],
+    moisture: [0.12],
+    runHours: [72],
+    humidity: [65],
+    operatorExp: []
+  };
+
+  function renderDependence(key) {
+    const f = D.FEATURES.find(o => o.key === key);
+    const pts = D.DATASET.map((row, ri) => {
+      const phi = globalPhi[ri][key];
+      return {
+        value: [row[key], phi],
+        itemStyle: {
+          color: phi >= 0 ? "rgba(255,92,110,.85)" : "rgba(56,232,160,.85)",
+          shadowBlur: 6,
+          shadowColor: phi >= 0 ? "rgba(255,92,110,.4)" : "rgba(56,232,160,.4)"
+        },
+        batch: row.id
+      };
+    });
+
+    chartDependence.setOption({
       textStyle: T.textStyle,
-      grid: { left: 100, right: 30, top: 14, bottom: 30 },
+      grid: { left: 56, right: 30, top: 26, bottom: 44 },
       tooltip: {
         ...T.tooltip,
-        formatter: p => `批次 <b>${p.data.batch}</b><br/>${p.data.feat}：${p.data.raw}<br/>φ = ${p.value[0].toFixed(3)} pp`
+        formatter: p =>
+          `批次 <b>${p.data.batch}</b><br/>${f.name}：${p.value[0].toFixed(f.digits)} ${f.unit}` +
+          `<br/>風險貢獻 φ = ${p.value[1] >= 0 ? "+" : ""}${p.value[1].toFixed(2)} pp`
       },
       xAxis: {
-        type: "value", name: "SHAP φ (pp)",
-        nameTextStyle: { color: AXIS_COLOR, fontSize: 10 },
+        type: "value", scale: true,
+        name: `${f.name}（${f.unit}）`, nameLocation: "middle", nameGap: 30,
+        nameTextStyle: { color: "#d7e3f4", fontSize: 12 },
         axisLine: T.axisLine, splitLine: T.splitLine,
         axisLabel: { color: AXIS_COLOR, fontSize: 10 }
       },
       yAxis: {
-        // inverse: 讓 fi=0（最重要特徵）顯示在最上方，與 mean|SHAP| 長條圖一致
-        type: "value", min: -0.7, max: catOrder.length - 0.3, inverse: true,
-        interval: 1,
-        axisLine: { show: false }, splitLine: T.splitLine,
-        axisLabel: {
-          color: "#d7e3f4", fontSize: 12,
-          formatter: v => (Number.isInteger(v) && catOrder[v] ? catOrder[v].name : "")
-        }
+        type: "value", name: "對不良率的貢獻 φ (pp)",
+        nameTextStyle: { color: AXIS_COLOR, fontSize: 10 },
+        axisLine: T.axisLine, splitLine: T.splitLine,
+        axisLabel: { color: AXIS_COLOR, fontSize: 10 }
       },
       series: [{
-        type: "scatter", symbolSize: 7, data: points,
-        emphasis: { scale: 1.6 },
+        type: "scatter", symbolSize: 10, data: pts,
+        emphasis: { scale: 1.5 },
         markLine: {
           silent: true, symbol: "none",
-          lineStyle: { color: "rgba(125,140,166,.5)", type: "dashed" },
-          data: [{ xAxis: 0 }], label: { show: false }
+          data: [
+            {
+              yAxis: 0,
+              lineStyle: { color: "rgba(125,140,166,.5)", type: "dashed" },
+              label: { show: false }
+            },
+            ...(SPEC_LINES[key] || []).map(v => ({
+              xAxis: v,
+              lineStyle: { color: "rgba(255,181,71,.8)", type: "dashed", width: 1.5 },
+              label: { show: true, color: "#ffb547", fontSize: 10, formatter: `規範 ${v}` }
+            }))
+          ]
         },
-        animationDelay: () => Math.random() * 400
+        animationDelay: idx => idx * 8
       }]
-    });
+    }, { replaceMerge: ["series"] });
   }
 
   /* -------------------------------------------------------- sub-tabs ---- */
@@ -496,10 +530,7 @@
       $(`subtab-${btn.dataset.subtab}`).classList.add("active");
       if (btn.dataset.subtab === "global") {
         computeGlobal();
-        setTimeout(() => {
-          chartImportance && chartImportance.resize();
-          chartBeeswarm && chartBeeswarm.resize();
-        }, 30);
+        setTimeout(() => safeResize(chartImportance, chartDependence), 30);
       }
     });
   });
@@ -515,5 +546,5 @@
     $("btn-whatif").addEventListener("click", runWhatIf);
   }
 
-  window.ShapUI = { init, resize: () => safeResize(chartConverge, chartWaterfall, chartImportance, chartBeeswarm) };
+  window.ShapUI = { init, resize: () => safeResize(chartConverge, chartWaterfall, chartImportance, chartDependence) };
 })();

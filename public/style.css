@@ -350,12 +350,10 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 .kpi.alert b { color: var(--red); }
 .kpi.good b { color: var(--cyan); }
 
-/* Copilot 常駐右欄：左側為圖表雙欄，右側 sticky 跟著視窗 */
-.war-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
-/* 兩欄等高伸展（align-items 預設 stretch），左欄面板用 flex 補滿 → 底部對齊 */
+/* Copilot 常駐右欄；三欄以 grid stretch 等高，底部永遠切齊 */
+.war-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; }
 .war-main { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; min-width: 0; }
 .war-left, .war-mid, .war-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.war-right { position: sticky; top: 84px; }
 .war-left section.panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .war-left .war-chart { flex: 1; height: auto; min-height: 210px; }
 .war-chart { height: 240px; }
@@ -395,7 +393,7 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 .machine.down .mid { color: var(--red); }
 
 .feed-panel .event-feed {
-  flex: 1; min-height: 140px; max-height: 320px; overflow-y: auto;
+  flex: 1; min-height: 140px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 7px; padding: 2px 14px 14px;
 }
 .event {
@@ -420,7 +418,8 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
   display: flex; flex-direction: column;
   border-color: rgba(171, 123, 255, 0.35);
   box-shadow: 0 0 30px rgba(171, 123, 255, 0.08);
-  height: calc(100vh - 100px);
+  flex: 1;            /* 跟著等高的右欄補滿 → 與左中欄底部切齊 */
+  height: auto;
   min-height: 520px;
 }
 .copilot-panel::before { background: linear-gradient(90deg, transparent, rgba(171,123,255,.6), transparent); }
@@ -513,8 +512,7 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 }
 @media (max-width: 900px) {
   .war-layout { grid-template-columns: 1fr; }
-  .war-right { position: static; }
-  .copilot-panel { height: auto; min-height: 480px; }
+  .copilot-panel { min-height: 480px; }
   .copilot-feed { max-height: 380px; }
   .run-grid { grid-template-columns: 1fr; }
   .advice-list { grid-template-columns: 1fr; }

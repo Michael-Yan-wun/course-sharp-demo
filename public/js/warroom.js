@@ -226,11 +226,15 @@
     chartProd = echarts.init($("chart-production"));
     chartYield = echarts.init($("chart-yield"));
     chartGauge = echarts.init($("chart-gauge"));
-    window.addEventListener("resize", () => {
+    // 容器是彈性高度（flex 補滿欄高），用 ResizeObserver 跟著重算 canvas 尺寸
+    const resizeAll = () => {
       [chartProd, chartYield, chartGauge].forEach(c => {
         if (c && c.getDom() && c.getDom().offsetWidth > 0) c.resize();
       });
-    });
+    };
+    window.addEventListener("resize", resizeAll);
+    const ro = new ResizeObserver(resizeAll);
+    ["chart-production", "chart-yield", "chart-gauge"].forEach(id => ro.observe($(id)));
 
     chartProd.setOption({
       textStyle: t.textStyle,

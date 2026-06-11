@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WinHub.AI 戰情室</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081020'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%2329e6ff'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23409cff' stroke-width='1.5' opacity='.6'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- ════════════════ 頂部列 ════════════════ -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><span></span></div>
+      <div class="brand-text">
+        <h1>WinHub.AI <em>戰情室</em></h1>
+        <p>INTELLIGENT OPERATIONS COMMAND CENTER</p>
+      </div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-page="shap">
+        <span class="tab-num">01</span> SHAP 預警解析
+      </button>
+      <button class="tab-btn" data-page="war">
+        <span class="tab-num">02</span> 營運戰情室
+      </button>
+      <div class="tab-glider"></div>
+    </nav>
+
+    <div class="topbar-right">
+      <div class="conn" id="conn-status"><i class="dot"></i><span>連線中…</span></div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- ════════════════ Tab 1：SHAP 預警解析 ════════════════ -->
+  <main class="page active" id="page-shap">
+    <section class="hero-strip panel">
+      <div class="hero-title">
+        <h2>預警轉建議模組 <span class="x">×</span> SHAP 可解釋 AI</h2>
+        <p>模型不只要會「預警」，還要說得出<b>為什麼</b>，才能轉成現場可以執行的<b>建議</b>。</p>
+      </div>
+      <div class="hero-chips">
+        <div class="chip"><label>預警模型</label><b>不良率預測 ‧ 梯度提升</b></div>
+        <div class="chip"><label>特徵數</label><b class="mono">8</b></div>
+        <div class="chip"><label>生產批次</label><b class="mono">50</b></div>
+        <div class="chip"><label>全廠平均不良率（基準值）</label><b class="mono accent" id="shap-baseline">--%</b></div>
+      </div>
+    </section>
+
+    <div class="shap-layout">
+      <!-- 左：生產批次資料 -->
+      <section class="panel table-panel">
+        <div class="panel-head">
+          <h3><i class="ico">▦</i> 模擬生產批次資料 <small>射出成型 ‧ 50 筆</small></h3>
+          <span class="hint">點選任一批次 → 右側解析</span>
+        </div>
+        <div class="table-wrap">
+          <table id="shap-table">
+            <thead>
+              <tr>
+                <th>批次</th><th>機台</th><th>模溫<small>°C</small></th><th>壓力<small>bar</small></th>
+                <th>保壓<small>s</small></th><th>含水率<small>%</small></th><th>濕度<small>%</small></th>
+                <th>預測不良率</th><th>風險</th>
+              </tr>
+            </thead>
+            <tbody id="shap-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 右：解析區 -->
+      <section class="analysis-col">
+        <div class="subtabs">
+          <button class="subtab-btn active" data-subtab="local">單批次 SHAP 解析</button>
+          <button class="subtab-btn" data-subtab="global">全局特徵重要性</button>
+        </div>
+
+        <!-- 單批次解析 -->
+        <div class="subtab-page active" id="subtab-local">
+          <div class="panel sel-panel">
+            <div class="sel-head">
+              <div class="sel-id">
+                <label>解析對象</label>
+                <b id="sel-id" class="mono">--</b>
+                <span id="sel-machine" class="mono sel-mc">--</span>
+              </div>
+              <div class="sel-pred">
+                <label>模型預測不良率</label>
+                <b id="sel-pred" class="mono">--%</b>
+                <span id="sel-risk" class="risk-badge">--</span>
+              </div>
+            </div>
+            <div class="sel-features" id="sel-features"></div>
+          </div>
+
+          <div class="panel run-panel">
+            <div class="panel-head">
+              <h3><i class="ico">⚙</i> Shapley 排列抽樣計算 <small>Monte Carlo Permutation Sampling</small></h3>
+              <div class="run-controls">
+                <select id="shap-speed">
+                  <option value="slow">慢速講解</option>
+                  <option value="normal" selected>正常</option>
+                  <option value="fast">快速</option>
+                </select>
+                <button class="btn primary" id="btn-shap-run">▶ 開始計算</button>
+              </div>
+            </div>
+            <div class="run-status">
+              <div class="progress"><div class="progress-fill" id="shap-progress"></div></div>
+              <div class="iter mono"><span id="shap-iter">0</span> / 300 次排列抽樣</div>
+            </div>
+            <div class="run-grid">
+              <div class="run-chart">
+                <h4>各特徵 φ 值收斂過程</h4>
+                <div class="chart" id="chart-converge"></div>
+              </div>
+              <div class="run-log">
+                <h4>抽樣即時日誌</h4>
+                <div class="log-box" id="shap-log">
+                  <div class="log-line muted">待命中 — 按「開始計算」播放抽樣過程</div>
+                </div>
+                <div class="log-explain">
+                  每次迭代：抽 1 筆背景樣本 z + 1 個特徵排列 π，<br/>
+                  依序把特徵換成目標批次的值，量測 f 的變化（邊際貢獻）。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel waterfall-panel">
+            <div class="panel-head">
+              <h3><i class="ico">≋</i> SHAP 瀑布圖 <small>基準值 → 各特徵貢獻 → 模型預測</small></h3>
+              <div class="equation mono" id="shap-equation">
+                <span id="eq-baseline">基準 --%</span> <span class="op">+</span>
+                <span id="eq-sum">Σφ --</span> <span class="op">=</span>
+                <span id="eq-pred">預測 --%</span> <span class="ok" id="eq-check"></span>
+              </div>
+            </div>
+            <div class="chart tall" id="chart-waterfall"></div>
+          </div>
+
+          <div class="panel advice-panel">
+            <div class="panel-head">
+              <h3><i class="ico">⚑</i> 預警 → 建議行動 <small>由 SHAP 正貢獻自動生成</small></h3>
+              <button class="btn ghost" id="btn-whatif" disabled>⟳ 套用建議重新預測</button>
+            </div>
+            <div class="advice-list" id="advice-list">
+              <div class="advice-empty">完成 SHAP 計算後，系統會把主要風險因子轉換成可執行的改善建議。</div>
+            </div>
+            <div class="whatif-result" id="whatif-result"></div>
+          </div>
+        </div>
+
+        <!-- 全局重要性 -->
+        <div class="subtab-page" id="subtab-global">
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i class="ico">▥</i> 全廠特徵重要性 <small>mean |SHAP| ‧ 50 批次</small></h3>
+            </div>
+            <div class="chart tall" id="chart-importance"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i class="ico">፨</i> SHAP 蜂群圖 <small>每點 = 一個批次 ‧ 顏色 = 特徵值高低</small></h3>
+            </div>
+            <div class="chart beeswarm" id="chart-beeswarm"></div>
+            <p class="global-note">
+              判讀：點越往<b class="pos">右</b>代表把不良率<b class="pos">往上推</b>；顏色越<b style="color:#ff7043">紅</b>代表該特徵值越高。
+              例如「原料含水率」紅點集中在右側 → 含水率越高、不良率風險越高。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ════════════════ Tab 2：營運戰情室 ════════════════ -->
+  <main class="page" id="page-war">
+    <!-- KPI 列 -->
+    <section class="kpi-row">
+      <div class="kpi panel" id="kpi-card-oee">
+        <label>整線 OEE</label>
+        <div class="kpi-val"><b class="mono" id="kpi-oee">--</b><span class="unit">%</span></div>
+        <div class="kpi-delta mono" id="kpi-oee-delta"></div>
+      </div>
+      <div class="kpi panel">
+        <label>今日產量 / 目標</label>
+        <div class="kpi-val"><b class="mono" id="kpi-output">--</b><span class="unit">件</span></div>
+        <div class="kpi-delta mono" id="kpi-output-delta"></div>
+      </div>
+      <div class="kpi panel">
+        <label>即時良率</label>
+        <div class="kpi-val"><b class="mono" id="kpi-yield">--</b><span class="unit">%</span></div>
+        <div class="kpi-delta mono" id="kpi-yield-delta"></div>
+      </div>
+      <div class="kpi panel">
+        <label>稼動機台</label>
+        <div class="kpi-val"><b class="mono" id="kpi-machines">--</b><span class="unit">/ 12</span></div>
+        <div class="kpi-delta mono" id="kpi-machines-delta"></div>
+      </div>
+      <div class="kpi panel" id="kpi-card-alarms">
+        <label>未結警報</label>
+        <div class="kpi-val"><b class="mono" id="kpi-alarms">--</b><span class="unit">件</span></div>
+        <div class="kpi-delta mono" id="kpi-alarms-delta"></div>
+      </div>
+      <div class="kpi panel">
+        <label>即時能耗</label>
+        <div class="kpi-val"><b class="mono" id="kpi-energy">--</b><span class="unit">kW</span></div>
+        <div class="kpi-delta mono" id="kpi-energy-delta"></div>
+      </div>
+    </section>
+
+    <!-- 主面板區 -->
+    <div class="war-layout">
+      <div class="war-left">
+        <section class="panel">
+          <div class="panel-head">
+            <h3><i class="ico">⌁</i> 每分鐘產出 <small>UPH Trend ‧ Live</small><i class="live-dot"></i></h3>
+          </div>
+          <div class="chart war-chart" id="chart-production"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h3><i class="ico">✓</i> 即時良率走勢 <small>Rolling Yield ‧ Live</small><i class="live-dot"></i></h3>
+          </div>
+          <div class="chart war-chart" id="chart-yield"></div>
+        </section>
+        <section class="panel scenario-panel">
+          <div class="panel-head"><h3><i class="ico">⚡</i> 情境注入 <small>講師控制台</small></h3></div>
+          <div class="scenario-btns">
+            <button class="btn scenario" data-scenario="overheat">🔥 模溫飆高</button>
+            <button class="btn scenario" data-scenario="yield-drop">📉 良率劣化</button>
+            <button class="btn scenario" data-scenario="rush-order">📦 急單插入</button>
+            <button class="btn scenario" data-scenario="breakdown">🛑 設備停機</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="war-mid">
+        <section class="panel machine-panel">
+          <div class="panel-head">
+            <h3><i class="ico">▣</i> 機台狀態 <small>12 台 ‧ Live</small><i class="live-dot"></i></h3>
+            <div class="legend">
+              <span><i class="lg run"></i>運轉</span><span><i class="lg idle"></i>待機</span>
+              <span><i class="lg warn"></i>警報</span><span><i class="lg down"></i>停機</span>
+            </div>
+          </div>
+          <div class="machine-grid" id="machine-grid"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3><i class="ico">◔</i> OEE 即時儀表</h3></div>
+          <div class="chart gauge-chart" id="chart-gauge"></div>
+        </section>
+        <section class="panel feed-panel">
+          <div class="panel-head"><h3><i class="ico">☄</i> 事件流 <small>Event Stream</small><i class="live-dot"></i></h3></div>
+          <div class="event-feed" id="event-feed"></div>
+        </section>
+      </div>
+
+      <!-- 右：AI Copilot -->
+      <div class="war-right">
+        <section class="panel copilot-panel">
+          <div class="panel-head copilot-head">
+            <h3>
+              <span class="copilot-orb" id="copilot-orb"></span>
+              AI Copilot <small>主動回報 ‧ Proactive Briefing</small>
+            </h3>
+            <div class="copilot-meta">
+              <span class="copilot-src mono" id="copilot-source">--</span>
+            </div>
+          </div>
+          <div class="copilot-feed" id="copilot-feed">
+            <div class="copilot-welcome">
+              <b>WinHub.AI Copilot 已就緒。</b><br/>
+              偵測到產線異常時會<b>主動回報</b>；也可由下方按鈕請求即時簡報，或直接提問。
+            </div>
+          </div>
+          <div class="copilot-actions">
+            <button class="btn primary" id="btn-brief">⟴ 請求產線即時簡報</button>
+            <label class="auto-toggle">
+              <input type="checkbox" id="auto-toggle" checked />
+              <span class="switch"></span> 自動巡檢回報
+            </label>
+          </div>
+          <div class="copilot-ask">
+            <input id="ask-input" type="text" placeholder="向 Copilot 提問，例：現在最大的風險是什麼？" />
+            <button class="btn ghost" id="btn-ask">送出</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>WinHub.AI 戰情室 ‧ 教學示範系統</span>
+    <span class="mono" id="footer-mode"></span>
+  </footer>
+
+  <script src="vendor/echarts.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/shap-ui.js"></script>
+  <script src="js/copilot.js"></script>
+  <script src="js/warroom.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

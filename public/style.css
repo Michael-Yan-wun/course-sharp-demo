@@ -21,13 +21,17 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { height: 100%; }
+html { height: 100%; }
 body {
   font-family: var(--sans);
   background: var(--bg);
   color: var(--txt);
   overflow-x: hidden;
   font-size: 14px;
+  /* 全高 flex column：頁面內容撐滿、footer 永遠貼底 */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .mono { font-family: var(--mono); letter-spacing: 0.04em; }
@@ -112,8 +116,8 @@ body {
 .clock { font-family: var(--mono); font-size: 19px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 10px rgba(41,230,255,.4); }
 
 /* ------------------------------------------------------------ pages --- */
-.page { display: none; padding: 18px 26px 30px; max-width: 1840px; margin: 0 auto; }
-.page.active { display: block; animation: pageIn .45s ease; }
+.page { display: none; padding: 18px 26px 30px; max-width: 1840px; margin: 0 auto; width: 100%; }
+.page.active { display: block; animation: pageIn .45s ease; flex: 1 0 auto; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 /* ------------------------------------------------------------ panels -- */
@@ -355,7 +359,9 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 .war-main { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; min-width: 0; }
 .war-left, .war-mid, .war-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .war-left section.panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.war-left .war-chart { flex: 1; height: auto; min-height: 210px; }
+/* height:0 + flex 撐滿：圖表的實際高度由欄高決定，
+   ECharts 內層 div 的 inline 尺寸不會反向撐高版面（避免越長越高的迴圈） */
+.war-left .war-chart { flex: 1 1 0; height: 0; min-height: 210px; }
 .war-chart { height: 240px; }
 .gauge-chart { height: 190px; }
 .feed-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -393,7 +399,8 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 .machine.down .mid { color: var(--red); }
 
 .feed-panel .event-feed {
-  flex: 1; min-height: 140px; overflow-y: auto;
+  /* height:0：事件累積只在面板內捲動，不撐高版面 */
+  flex: 1 1 0; height: 0; min-height: 140px; overflow-y: auto;
   display: flex; flex-direction: column; gap: 7px; padding: 2px 14px 14px;
 }
 .event {
@@ -437,9 +444,9 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 }
 .copilot-src { font-size: 10px; color: var(--txt-dim); border: 1px solid var(--panel-border); border-radius: 5px; padding: 2px 8px; }
 .copilot-feed {
-  flex: 1; overflow-y: auto; padding: 6px 14px;
+  /* height:0：訊息串流只在面板內捲動，絕不改變整體版面高度 */
+  flex: 1 1 0; height: 0; min-height: 0; overflow-y: auto; padding: 6px 14px;
   display: flex; flex-direction: column; gap: 12px;
-  min-height: 0;
 }
 .copilot-welcome {
   font-size: 12px; color: var(--txt-dim); line-height: 1.8;
@@ -488,6 +495,7 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 .footer {
   display: flex; justify-content: space-between; padding: 10px 26px 18px;
   color: var(--txt-dim); font-size: 11px;
+  margin-top: auto; /* 內容不足一屏時仍貼底 */
 }
 
 /* ------------------------------------------------------- scrollbars --- */
@@ -513,7 +521,9 @@ td.hot { color: var(--red); text-shadow: 0 0 8px rgba(255,92,110,.5); }
 @media (max-width: 900px) {
   .war-layout { grid-template-columns: 1fr; }
   .copilot-panel { min-height: 480px; }
-  .copilot-feed { max-height: 380px; }
+  .copilot-feed { height: auto; max-height: 380px; }
+  .feed-panel .event-feed { height: auto; max-height: 300px; }
+  .war-left .war-chart { height: 240px; flex: none; }
   .run-grid { grid-template-columns: 1fr; }
   .advice-list { grid-template-columns: 1fr; }
   .sel-features { grid-template-columns: repeat(2, 1fr); }

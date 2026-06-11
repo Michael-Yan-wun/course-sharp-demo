@@ -34,6 +34,8 @@
   const STATUS_LABEL = { run: "運轉中", idle: "待機", warn: "警報", down: "停機" };
 
   let chartProd, chartYield, chartGauge;
+  let resizeObserver = null;        // 模組層級持有，避免被 GC
+  let resizeAllCharts = () => {};
 
   const rnd = (a, b) => a + Math.random() * (b - a);
   const walk = (v, step, lo, hi) => Math.min(hi, Math.max(lo, v + rnd(-step, step)));
@@ -227,14 +229,14 @@
     chartYield = echarts.init($("chart-yield"));
     chartGauge = echarts.init($("chart-gauge"));
     // 容器是彈性高度（flex 補滿欄高），用 ResizeObserver 跟著重算 canvas 尺寸
-    const resizeAll = () => {
+    resizeAllCharts = () => {
       [chartProd, chartYield, chartGauge].forEach(c => {
         if (c && c.getDom() && c.getDom().offsetWidth > 0) c.resize();
       });
     };
-    window.addEventListener("resize", resizeAll);
-    const ro = new ResizeObserver(resizeAll);
-    ["chart-production", "chart-yield", "chart-gauge"].forEach(id => ro.observe($(id)));
+    window.addEventListener("resize", resizeAllCharts);
+    resizeObserver = new ResizeObserver(resizeAllCharts);
+    ["chart-production", "chart-yield", "chart-gauge"].forEach(id => resizeObserver.observe($(id)));
 
     chartProd.setOption({
       textStyle: t.textStyle,
@@ -457,6 +459,9 @@
     }
     pushEvent("info", "系統", "WinHub.AI 戰情室已連線，開始接收產線即時數據");
     tickOnce();
+    // 首次 tick 渲染機台格後欄高才定案，補一次 resize 讓圖表填滿
+    setTimeout(resizeAllCharts, 120);
+    setTimeout(resizeAllCharts, 600);
     setInterval(tickOnce, 2000);
   }
 
